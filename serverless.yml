@@ -1,0 +1,100 @@
+service: quiz-game
+
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-north-1
+  environment:
+    JWT_SECRET: youknowmysecret
+    USERS_TABLE: quizgame-dev-Users
+    QUIZZES_TABLE: quizgame-dev-Quizzes
+    QUESTIONS_TABLE: quizgame-dev-Questions
+    SCORES_TABLE: quizgame-dev-Scores
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        - arn:aws:dynamodb:eu-north-1:#{aws:accountId}:table/quizgame-dev-Users
+        - arn:aws:dynamodb:eu-north-1:#{aws:accountId}:table/quizgame-dev-Quizzes
+        - arn:aws:dynamodb:eu-north-1:#{aws:accountId}:table/quizgame-dev-Questions
+        - arn:aws:dynamodb:eu-north-1:#{aws:accountId}:table/quizgame-dev-Scores
+
+functions:
+  app:
+    handler: server.handler # 👈 from your server.js
+    events:
+      - httpApi: "*" # Expose all Express routes via API Gateway
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: quizgame-Users
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    QuizzesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: quizgame-Quizzes
+        AttributeDefinitions:
+          - AttributeName: quizId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: quizId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    QuestionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: quizgame-Questions
+        AttributeDefinitions:
+          - AttributeName: questionId
+            AttributeType: S
+          - AttributeName: quizId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: questionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: quizId-index
+            KeySchema:
+              - AttributeName: quizId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    ScoresTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: quizgame-Scores
+        AttributeDefinitions:
+          - AttributeName: quizId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: quizId
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: quizId-index
+            KeySchema:
+              - AttributeName: quizId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
